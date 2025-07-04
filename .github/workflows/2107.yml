@@ -1,0 +1,94 @@
+name: Build MW4530R USB OpenWrt2102
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout OpenWrt v21.02.7
+        uses: actions/checkout@v4
+        with:
+          repository: openwrt/openwrt
+          ref: v21.02.7
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential ccache ecj fastjar file g++ gawk \
+            gcc git java-propose-classpath libelf-dev libncurses5-dev \
+            libncursesw5-dev libssl-dev python3 unzip wget zlib1g-dev \
+            python3-setuptools python3-distutils rsync bzip2
+
+      - name: Patch DTS + image template for 16MB flash
+        run: |
+          sed -i 's/reg = <0x020000 0x7d0000>;/reg = <0x020000 0xfe0000>;/' target/linux/ath79/dts/ar9344_tplink_tl-wdrxxxx.dtsi
+          sed -i 's/reg = <0x7f0000 0x010000>;/reg = <0xff0000 0x010000>;/' target/linux/ath79/dts/ar9344_tplink_tl-wdrxxxx.dtsi
+          sed -i '/define Device\/mercury_mw4530r-v1/,/^endef/ s/$(Device\/tplink-8mlzma)/$(Device\/tplink-16mlzma)/' target/linux/ath79/image/generic.mk
+
+      - name: Prepare .config
+        run: |
+          cat > .config <<EOF
+          CONFIG_TARGET_ath79=y
+          CONFIG_TARGET_ath79_generic=y
+          CONFIG_TARGET_ath79_generic_DEVICE_mercury_mw4530r-v1=y
+
+          CONFIG_TARGET_ROOTFS_SQUASHFS=y
+
+          CONFIG_PACKAGE_kmod-usb-core=y
+          CONFIG_PACKAGE_kmod-usb2=y
+          CONFIG_PACKAGE_kmod-usb-ledtrig-usbport=y
+          CONFIG_PACKAGE_kmod-usb-ohci=y
+          CONFIG_PACKAGE_kmod-usb-uhci=y
+
+          CONFIG_PACKAGE_kmod-usb-net=y
+          CONFIG_PACKAGE_kmod-usb-net-cdc-ether=y
+          CONFIG_PACKAGE_kmod-usb-net-rndis=y
+          CONFIG_PACKAGE_kmod-usb-net-qmi-wwan=y
+          CONFIG_PACKAGE_kmod-usb-net-wwan=y
+          CONFIG_PACKAGE_kmod-usb-net-ipheth=y
+          CONFIG_PACKAGE_kmod-usb-net-huawei-cdc-ncm=y
+          CONFIG_PACKAGE_kmod-usb-net-huawei-cdc-wdm=y
+          CONFIG_PACKAGE_kmod-usb-net-sierrawireless=y
+          CONFIG_PACKAGE_kmod-usb-net-mwifiex=y
+          CONFIG_PACKAGE_kmod-usb-net-cdc-mbim=y
+
+          CONFIG_PACKAGE_odhcp6c=y
+          CONFIG_PACKAGE_ppp=y
+          CONFIG_PACKAGE_ppp-mod-pppoe=y
+          CONFIG_PACKAGE_3gmodem=y
+          CONFIG_PACKAGE_usb-modeswitch=y
+
+          CONFIG_PACKAGE_kmod-ath9k=y
+          CONFIG_PACKAGE_wpad-basic-wolfssl=y
+
+          CONFIG_PACKAGE_luci=y
+          CONFIG_PACKAGE_luci-base=y
+          CONFIG_PACKAGE_luci-app-firewall=y
+          CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
+
+          CONFIG_PACKAGE_htop=y
+          CONFIG_PACKAGE_screen=y
+          EOF
+
+          make defconfig
+
+      - name: Cache downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            dl
+            build_dir
+          key: openwrt-${{ github.run_id }}
+
+      - name: Build firmware
+        run: make -j$(nproc)
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: MW4530R-USB-Firmware-Full
+          path: bin/targets/ath79/generic/*sysupgrade*.bin
+
