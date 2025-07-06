@@ -1,0 +1,39 @@
+name: Build JDCloud RE-CP-02 LEDE
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Clone LEDE source
+        run: |
+          git clone https://github.com/coolsnowwolf/lede.git
+          cd lede
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+          cat > .config <<EOF
+          CONFIG_TARGET_ramips=y
+          CONFIG_TARGET_ramips_mt7621=y
+          CONFIG_TARGET_ramips_mt7621_DEVICE_jdcloud_re-cp02=y
+          CONFIG_TARGET_ROOTFS_SQUASHFS=y
+          EOF
+
+          make defconfig
+
+      - name: Build firmware
+        run: |
+          cd lede
+          make -j$(nproc)
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: JDCloud-RECP02-Firmware
+          path: lede/bin/targets/ramips/mt7621/*.bin
