@@ -30,7 +30,7 @@ jobs:
         make defconfig
 
     - name: Compile firmware
-      run: make -j1 V=s
+      run: make -j$(nproc)
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
