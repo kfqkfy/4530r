@@ -2,8 +2,6 @@ name: Build OpenWrt for JDCloud RE-CP-02 (MT7621)
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 3 * * 5'
 
 jobs:
   build:
