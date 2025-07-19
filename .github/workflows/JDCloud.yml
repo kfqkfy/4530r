@@ -36,3 +36,10 @@ jobs:
       with:
         name: openwrt-firmware
         path: bin/targets/
+
+    - name: If build failed, dump error logs
+      if: failure()
+      run: |
+        find ./ -name '*.log' | xargs tail -n 100
+        dmesg | tail -n 50
+
