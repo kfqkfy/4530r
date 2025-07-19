@@ -1,0 +1,35 @@
+#!/bin/sh /etc/rc.common
+START=15
+
+start() {
+  # 判断 overlay 是否已经挂载
+  mountpoint -q /overlay && {
+    echo "Overlay 已挂载，跳过"
+    return 0
+  }
+
+  # 查找第一个 mmcblk0p* ext4 分区
+  MMC_DEV=$(blkid | grep mmcblk0p | grep ext4 | awk -F: '{print $1}' | head -n1)
+  if [ -z "$MMC_DEV" ]; then
+    echo "未检测到 TF 卡 ext4 分区，跳过挂载"
+    return 1
+  fi
+
+  echo "挂载 $MMC_DEV 到 /mnt"
+  mount -t ext4 "$MMC_DEV" /mnt || return 1
+
+  if [ -f /mnt/etc/openwrt_release ]; then
+    echo "overlay 已初始化，切换挂载"
+    umount /overlay || true
+    mount --move /mnt /overlay
+  else
+    echo "初始化 overlay 分区"
+    mkdir -p /mnt/upper /mnt/work
+    mount -t overlay overlay -o lowerdir=/,upperdir=/mnt/upper,workdir=/mnt/work /mnt
+    cp -a /rom/* /mnt/upper/
+    sync
+    umount /mnt
+    mount "$MMC_DEV" /overlay
+    echo "初始化完成，建议重启"
+  fi
+}
