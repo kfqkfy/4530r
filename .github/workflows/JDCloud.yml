@@ -1,4 +1,4 @@
-name: Build OpenWrt for JDCloud RE-CP-02
+name: Build OpenWrt for JDCloud RE-CP-02 (master)
 
 on:
   workflow_dispatch:
@@ -7,39 +7,40 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout immortalwrt
+    - name: Checkout source
       uses: actions/checkout@v4
       with:
-        repository: immortalwrt/immortalwrt
-        ref: openwrt-23.05
+        repository: openwrt/openwrt
+        ref: master
 
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install -y build-essential ccache ecj fastjar file g++ gawk \
-        gettext git java-propose-classpath libelf-dev libncurses5-dev \
-        libncursesw5-dev libssl-dev python3 python3-setuptools \
-        rsync subversion swig time unzip wget zlib1g-dev
+        sudo apt install -y \
+          build-essential ccache ecj fastjar file g++ gawk gettext git \
+          libelf-dev libncurses5-dev libncursesw5-dev libssl-dev \
+          python3 python3-venv python3-pip \
+          rsync subversion swig time unzip wget zlib1g-dev
 
     - name: Load custom config
+      run: curl -Lo .config https://raw.githubusercontent.com/${{ github.repository }}/main/jdcloud.config
+
+    - name: Prepare build
       run: |
-        curl -Lo .config https://raw.githubusercontent.com/${{ github.repository }}/main/jdcloud.config
+        make defconfig
 
-    - name: Make defconfig
-      run: make defconfig
+    - name: Compile firmware
+      run: make -j1 V=s
 
-    - name: Build
-      run: make -j$(nproc)
-
-    - name: Upload firmware
+    - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: openwrt-firmware
-        path: bin/targets/
+        name: openwrt-master-firmware
+        path: bin/targets/ramips/mt7621/
 
-    - name: If build failed, dump error logs
+    - name: Dump logs on failure
       if: failure()
       run: |
-        find ./ -name '*.log' | xargs tail -n 100
-        dmesg | tail -n 50
-
+        echo "=== BUILD FAILED LOGS ==="
+        find . -name '*.log' | xargs tail -n 100 || true
+        dmesg | tail -n 50 || true
