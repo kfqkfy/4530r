@@ -20,6 +20,7 @@ jobs:
         run: |
           git clone https://github.com/openwrt/openwrt.git -b master openwrt
           cp jdcloud.config openwrt/.config
+          cp -r files openwrt/
 
       - name: Update and install feeds
         working-directory: ./openwrt
