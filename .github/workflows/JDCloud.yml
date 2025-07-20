@@ -19,6 +19,7 @@ jobs:
       - name: Clone OpenWrt
         run: |
           git clone https://github.com/openwrt/openwrt.git -b master openwrt
+          cp jdcloud.config openwrt/.config
 
       - name: Update and install feeds
         working-directory: ./openwrt
