@@ -24,10 +24,9 @@ jobs:
 
       - name: Update and install feeds
         working-directory: ./openwrt
-        shell: bash
         run: |
-          for i in 1 2 3; do ./scripts/feeds update -a --no-progress && break || sleep 10; done
-          for i in 1 2 3; do ./scripts/feeds install -a && break || sleep 10; done
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
 
       - name: Compile Firmware
         working-directory: ./openwrt
