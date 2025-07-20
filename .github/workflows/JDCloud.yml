@@ -33,7 +33,7 @@ jobs:
         run: |
           make defconfig
           make download -j8
-          make -j$(nproc)
+          make -j$(nproc) V=s
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
