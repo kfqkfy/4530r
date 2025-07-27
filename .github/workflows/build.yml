@@ -23,6 +23,10 @@ jobs:
           # 修改 image 模板为 16MB
           sed -i '/define Device\/mercury_mw4530r-v1/,/^endef/ s/$(Device\/tplink-8mlzma)/$(Device\/tplink-16mlzma)/' target/linux/ath79/image/generic.mk
 
+          # 移除 art 分区的只读标志
+          sed -i '/label = "art";/,/};/s/^\s*read-only;\s*$//' target/linux/ath79/dts/ar9344_tplink_tl-wdrxxxx.dtsi
+
+
       - name: Add uci-defaults script to enable wifi by default
         run: |
           mkdir -p files/etc/uci-defaults
@@ -30,6 +34,8 @@ jobs:
           #!/bin/sh
           uci set wireless.@wifi-device[0].disabled=0
           uci set wireless.@wifi-iface[0].disabled=0
+          uci set wireless.@wifi-device[1].disabled=0
+          uci set wireless.@wifi-iface[1].disabled=0
           uci commit wireless
           EOF
           chmod +x files/etc/uci-defaults/99_enable_wifi
